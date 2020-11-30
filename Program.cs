@@ -8,8 +8,10 @@ using PumpkinMC.Packets;
 using PumpkinMC.Packets.Handshake.Client;
 using PumpkinMC.Packets.Login.Client;
 using PumpkinMC.Packets.Login.Server;
+using PumpkinMC.Packets.Play.Client;
 using PumpkinMC.Packets.Play.Server;
 using PumpkinMC.Util;
+using PumpkinMC.Util.Conversion;
 
 namespace PumpkinMC
 {
@@ -99,6 +101,7 @@ namespace PumpkinMC
 
         public static int ReadPacket(NetworkStream stream, GameClient gameClient)
         {
+            var bebc = new BigEndianBitConverter();
             int packetLen = stream.ReadByte();
             //Console.WriteLine("Packet is {0} bytes long", packetLen);
             if (packetLen < 0)
@@ -133,7 +136,11 @@ namespace PumpkinMC
                 stream.WriteByte(0xFF);
                 stream.WriteByte(0xFF);
 
-                Console.WriteLine(BitConverter.ToString(System.Text.Encoding.BigEndianUnicode.GetBytes("Pumpkin 1.12.2")));
+                byte[] payload = System.Text.Encoding.BigEndianUnicode.GetBytes("§1\0127\0fuck\0Pumpkin 1.12.2\00\01");
+
+                stream.Write(payload);
+
+                Console.WriteLine(BitConverter.ToString(payload));
                 return 0;
             }
 
@@ -192,6 +199,7 @@ namespace PumpkinMC
                             status.version = new ServerStatusVersion("Pumpkin 1.12.2", PROTOCOL_VERSION);
                             status.players = new ServerStatusPlayerInfo(1, 0, new List<ServerStatusPlayer> { });
                             status.description = new MCJsonString("PumpkinMC Server, by Yellowberry");
+                            //status.favicon = "data:image/png;base64,...";
 
                             /*
                             var mcjsTemp = new MCJsonString();
@@ -219,7 +227,7 @@ namespace PumpkinMC
                             byte[] pingBytes = new byte[8];
                             stream.Read(pingBytes, 0, 8);
                             stream.Write(pingBytes, 0, 8);
-                            Console.WriteLine("ERROR: pong");
+                            Console.WriteLine("DISC: status pong");
                             return 0;
                         default:
                             byte[] packetTemp = new byte[packetLen];
@@ -261,7 +269,7 @@ namespace PumpkinMC
                             // Join Game
                             // exciting!
 
-                            var joinGamePacket = new S35JoinGame(0, 0x00, -1, 0x00, 0x00, "default");
+                            var joinGamePacket = new S35JoinGame(0, 0x00, 0, 0x00, 0x00, "default");
                             joinGamePacket.WritePacket(stream);
 
                             /*
@@ -313,6 +321,9 @@ namespace PumpkinMC
                             //stream.WriteByte
                             */
 
+                            var serverDifficultyPacket = new S13ServerDifficulty(3);
+                            serverDifficultyPacket.WritePacket(stream);
+
                             var spawnPositionPacket = new S78SpawnPosition(MCPosition.New(0,64,0));
                             spawnPositionPacket.WritePacket(stream);
                             
@@ -325,11 +336,10 @@ namespace PumpkinMC
                             stream.WriteByte(0x2F);
 
                             // X Y Z
-                            for (int i = 0; i < 3; i++)
-                            {
-                                stream.Write(new byte[8] { 0,0,0,0,0,0,0,0 });
-                            }
-                            
+                            stream.Write(bebc.GetBytes((double)8f));
+                            stream.Write(bebc.GetBytes((double)16f));
+                            stream.Write(bebc.GetBytes((double)8f));
+
                             // Yaw and Pitch
                             for (int i = 0; i < 2; i++)
                             {
@@ -394,6 +404,33 @@ namespace PumpkinMC
                                 VarInt.Write(4, stream);
                                 stream.WriteByte(0x00);
                             }
+                            else if (message == "/chunk") // TODO: WORK ON THIS, BROKEN
+                            {
+                                VarInt.Write(13, stream);
+                                stream.WriteByte(0x20);
+                                stream.Write(bebc.GetBytes(0));
+                                stream.Write(bebc.GetBytes(0));
+                                stream.WriteByte(0);
+                                VarInt.Write(0b00000001, stream);
+                                VarInt.Write(0, stream);    
+                                VarInt.Write(0, stream);
+                            }
+                            else if (message == "/health")
+                            {
+                                VarInt.Write(10, stream);
+                                stream.WriteByte(0x41);
+                                stream.Write(bebc.GetBytes(2f));
+                                VarInt.Write(10, stream);
+                                stream.Write(bebc.GetBytes(2f));
+                            }
+                            else if (message == "/item")
+                            {
+                                byte[] diamond = new byte[] { 0x01, 0x16, 0x01, 0x00, 0x00, 0x00 };
+                                VarInt.Write(10, stream);
+                                stream.WriteByte(0x14);
+                                stream.Write(bebc.GetBytes((short)1));
+                                stream.Write(diamond);    
+                            }
                             else
                             {
                                 byte[] respBytes = MCString.New(new MCJsonString(string.Format("[{0}] {1}", gameClient.username, message)).ToString());
@@ -415,6 +452,33 @@ namespace PumpkinMC
                             gameClient.mainHand = (MainHand)VarInt.Read(stream);
 
                             Console.WriteLine("[0x04] Client Info handled.");
+
+                            return packetLen;
+
+                        case 0x07:
+                            var clickClass = new C07ClickWindow();
+
+                            clickClass.windowId = stream.ReadByte();
+                            byte[] _slot = new byte[2];
+                            stream.Read(_slot, 0, 2);
+                            clickClass.slot = bebc.ToInt16(_slot, 0);
+                            clickClass.button = stream.ReadByte();
+                            byte[] _action = new byte[2];
+                            stream.Read(_action, 0, 2);
+                            clickClass.actionNum = bebc.ToInt16(_action, 0);
+                            clickClass.mode = VarInt.Read(stream);
+                            byte[] _item = new byte[2];
+                            stream.Read(_item, 0, 2);
+                            clickClass.item = _item;
+
+                            Console.WriteLine("[0x07] Click #{3}, Wnd={0}, Slot={1}, Btn={2}, Mode={4}, Item={5}",
+                                clickClass.windowId,
+                                clickClass.slot,
+                                clickClass.button,
+                                clickClass.actionNum,
+                                clickClass.mode,
+                                BitConverter.ToInt16(clickClass.item)
+                            );
 
                             return packetLen;
 
@@ -461,7 +525,7 @@ namespace PumpkinMC
                             return packetLen; // capture, parse and continue
                     }
                 default:
-                    Console.WriteLine("ERROR: play default");
+                    Console.WriteLine("ERROR: unknown gamestate, panic!");
                     return 0;
             }
         }

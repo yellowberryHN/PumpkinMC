@@ -13,7 +13,7 @@ namespace PumpkinMC.Util
         {
             JsonSerializer serializer = new JsonSerializer();
             serializer.NullValueHandling = NullValueHandling.Ignore;
-            serializer.DefaultValueHandling = DefaultValueHandling.Ignore;
+            serializer.DefaultValueHandling = DefaultValueHandling.Include;
 
             StringBuilder sb = new StringBuilder();
 
@@ -113,5 +113,6 @@ namespace PumpkinMC.Util
 
         public MCJsonString description;
 
+        public string favicon;
     }
 }
