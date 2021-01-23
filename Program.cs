@@ -61,7 +61,7 @@ namespace PumpkinMC
 
         public static byte[] KA = new byte[8] { 0xDE, 0xAD, 0xBE, 0xEF, 0xDE, 0xAD, 0xBE, 0xEF };
 
-        public static void kickClient(NetworkStream stream, GameClient client, MCJsonString reason)
+        public static void kickClient(Stream stream, GameClient client, MCJsonString reason)
         {
             byte[] json = MCString.New(reason.ToString());
 
@@ -81,7 +81,7 @@ namespace PumpkinMC
             stream.Write(json);
         }
 
-        public static void kickClient(NetworkStream stream, GameClient client, string reason)
+        public static void kickClient(Stream stream, GameClient client, string reason)
         {
             var res = new MCJsonString(reason);
             kickClient(stream, client, res);
@@ -177,10 +177,12 @@ namespace PumpkinMC
 
                             Console.WriteLine("Client is protocol {0}", gameClient.protocol);
 
+                            /*
                             if (gameClient.protocol != PROTOCOL_VERSION)
                             {
                                 throw new ArgumentException(String.Format("Wrong protocol, got {0}, expected {1}", gameClient.protocol, PROTOCOL_VERSION));
                             }
+                            */
 
                             break;
                         default:
@@ -365,11 +367,10 @@ namespace PumpkinMC
                     switch(packetId)
                     {
                         case 0x02: // Chat Message (to Server)
-                            byte[] messageBytes = new byte[VarInt.Read(stream)];
-                            stream.Read(messageBytes, 0, messageBytes.Length);
-                            string message = System.Text.Encoding.UTF8.GetString(messageBytes);
-                            bool cmd = message.Substring(0, 1) == "/";
-                            Console.WriteLine("[0x02] Got "+(cmd?"command":"chat message")+": \"{0}\"", (cmd?message.Substring(1):message));
+                            var packet = new C02Chat();
+                            packet.ReadPacket(stream, gameClient);
+
+                            /*
 
                             if(message == "/kick")
                             {
@@ -431,6 +432,10 @@ namespace PumpkinMC
                                 stream.Write(bebc.GetBytes((short)1));
                                 stream.Write(diamond);    
                             }
+                            else if (message.StartsWith('/'))
+                            {
+
+                            }
                             else
                             {
                                 byte[] respBytes = MCString.New(new MCJsonString(string.Format("[{0}] {1}", gameClient.username, message)).ToString());
@@ -439,6 +444,7 @@ namespace PumpkinMC
                                 stream.Write(respBytes);
                                 stream.WriteByte(0x00);
                             }
+                            */
 
                             return packetLen;
                         case 0x04: // Client Info
