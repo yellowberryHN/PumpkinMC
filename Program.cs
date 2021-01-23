@@ -79,6 +79,7 @@ namespace PumpkinMC
                     break;
             }
             stream.Write(json);
+            stream.Close();
         }
 
         public static void kickClient(Stream stream, GameClient client, string reason)
@@ -152,37 +153,14 @@ namespace PumpkinMC
                     switch (packetId)
                     {
                         case 0x00:
-                            /*
-                            gameClient.protocol = VarInt.Read(stream);
-                            
-
-                            int conHostLen = VarInt.Read(stream); // Connection Host Length, string
-                            byte[] buf = new byte[255];
-                            stream.Read(buf, 0, conHostLen);
-                            gameClient.connectHost = System.Text.Encoding.UTF8.GetString(buf, 0, conHostLen);
-
-                            byte[] conPortBytes = new byte[2];
-                            stream.Read(conPortBytes, 0, 2);
-                            Array.Reverse(conPortBytes);
-                            gameClient.connectPort = BitConverter.ToUInt16(conPortBytes, 0);
-
-                            gameClient.state = (GameState)VarInt.Read(stream);
-
-                            */
-
-
                             var packet = new C00Handshake();
                             packet.ReadPacket(stream);
                             packet.UpdateClient(gameClient);
 
                             Console.WriteLine("Client is protocol {0}", gameClient.protocol);
 
-                            /*
-                            if (gameClient.protocol != PROTOCOL_VERSION)
-                            {
-                                throw new ArgumentException(String.Format("Wrong protocol, got {0}, expected {1}", gameClient.protocol, PROTOCOL_VERSION));
-                            }
-                            */
+                            if (gameClient.protocol != PROTOCOL_VERSION) 
+                                kickClient(stream, gameClient, String.Format("Wrong protocol, got {0}, expected {1}", gameClient.protocol, PROTOCOL_VERSION));
 
                             break;
                         default:
@@ -328,31 +306,12 @@ namespace PumpkinMC
 
                             var spawnPositionPacket = new S78SpawnPosition(MCPosition.New(0,64,0));
                             spawnPositionPacket.WritePacket(stream);
-                            
+
                             // Player Position and Look (to Client)
 
-                            // Teleport ID
-                            byte[] teleId = VarInt.New(0);
-
-                            stream.WriteByte((byte)(33+teleId.Length+1));
-                            stream.WriteByte(0x2F);
-
-                            // X Y Z
-                            stream.Write(bebc.GetBytes((double)8f));
-                            stream.Write(bebc.GetBytes((double)16f));
-                            stream.Write(bebc.GetBytes((double)8f));
-
-                            // Yaw and Pitch
-                            for (int i = 0; i < 2; i++)
-                            {
-                                stream.Write(new byte[4] { 0, 0, 0, 0 });
-                            }
-
-                            // Flags
-                            stream.WriteByte(0x00);
-
-                            // Teleport ID (Write)
-                            stream.Write(teleId);
+                            var PPALPacket = new S47PlayerPositionAndLook(8f, 16f, 8f, 0f, 0f);
+                            PPALPacket.teleportId = 0;
+                            PPALPacket.WritePacket(stream);
 
                             gameClient.exists = true;
 
@@ -445,6 +404,15 @@ namespace PumpkinMC
                                 stream.WriteByte(0x00);
                             }
                             */
+
+                            return packetLen;
+                        case 0x03:
+                            var respawnPacket = new S53Respawn();
+                            respawnPacket.WritePacket(stream);
+
+                            var PPALPacket = new S47PlayerPositionAndLook(8f, 16f, 8f, 0f, 0f);
+                            PPALPacket.teleportId = 0;
+                            PPALPacket.WritePacket(stream);
 
                             return packetLen;
                         case 0x04: // Client Info
@@ -569,6 +537,7 @@ namespace PumpkinMC
                     var gameClient = new GameClient();
 
                     // Handshake time
+                    // FIXME: This is a bad idea. Breaks for empty packets.
                     while (i != 0 && client.Connected)
                     {
                         try

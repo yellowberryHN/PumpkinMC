@@ -32,6 +32,7 @@ namespace PumpkinMC.Packets.Play.Client
             byte[] messageBytes = new byte[VarInt.Read(stream)];
             stream.Read(messageBytes, 0, messageBytes.Length);
             string message = System.Text.Encoding.UTF8.GetString(messageBytes);
+            if (message.Length < 1) return;
             bool isCmd = message.Substring(0, 1) == "/";
             Console.WriteLine("[0x02] Got " + (isCmd ? "command" : "chat message") + ": \"{0}\"", (isCmd ? message.Substring(1) : message));
 
@@ -50,6 +51,37 @@ namespace PumpkinMC.Packets.Play.Client
                         break;
                     case "kick":
                         Program.kickClient(stream, gameClient, "kick requested by client");
+                        break;
+                    case "bar":
+                        var bar = new S12BossBar();
+                        bar.uuid = Guid.NewGuid();
+                        Console.WriteLine("BAR UUID: {0}", bar.uuid.ToString());
+                        bar.title = new MCJsonString("the test bar!");
+                        bar.title.bold = true;
+                        bar.title.color = "dark_blue";
+                        bar.health = 0.5f;
+                        bar.divider = S12BossBar.BossBarDivider.Six;
+                        bar.color = S12BossBar.BossBarColor.Blue;
+                        //bar.flags = S12BossBar.BossBarFlags.DarkSky;
+                        bar.WritePacket(stream);
+                        break;
+                    case "delbar":
+                        if(arr.Length > 1)
+                        {
+                            var delbar = new S12BossBar();
+                            delbar.uuid = Guid.Parse(arr[1]);
+                            delbar.action = S12BossBar.BossBarAction.Remove;
+                            delbar.WritePacket(stream);
+                        }
+                        break;
+                    case "health":
+                        int val = (arr.Length > 1) ? int.Parse(arr[1]) : 10;
+
+                        var health = new S65UpdateHealth();
+                        health.health = (float)val;
+                        health.food = val;
+                        health.saturation = 5f;
+                        health.WritePacket(stream);
                         break;
                     default:
                         break;
