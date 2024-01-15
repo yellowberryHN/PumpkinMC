@@ -6,15 +6,15 @@ using System.Text;
 
 namespace PumpkinMC.Packets.Play.Server
 {
-    class S78SpawnPosition : Packet
+    class S70SpawnPosition : Packet
     {
-        private const byte packetId = 0x4E;
+        private const byte packetId = 0x46;
 
         public ulong position;
 
-        public S78SpawnPosition() { }
+        public S70SpawnPosition() { }
 
-        public S78SpawnPosition(ulong position)
+        public S70SpawnPosition(ulong position)
         {
             this.position = position;
         }
@@ -24,8 +24,7 @@ namespace PumpkinMC.Packets.Play.Server
             MemoryStream ms = new MemoryStream();
 
             ms.WriteByte(packetId); // Spawn Position
-            ms.Write(new byte[5]);
-            //MCPosition.Write(position, ms); // why is this too long.
+            MCPosition.Write(position, ms); // why is this too long.
 
             return AddPacketHeader(ms.ToArray(), packetId);
         }

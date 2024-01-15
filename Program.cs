@@ -275,6 +275,7 @@ namespace PumpkinMC
 
                             var pluginMessagePacket = new S24PluginMessage("MC|Brand");
                             pluginMessagePacket.data = MCString.New("pumpkin");
+                            pluginMessagePacket.WritePacket(stream);
 
                             /*
                             byte[] mcBrand = MCString.New("MC|Brand");
@@ -304,12 +305,12 @@ namespace PumpkinMC
                             var serverDifficultyPacket = new S13ServerDifficulty(3);
                             serverDifficultyPacket.WritePacket(stream);
 
-                            var spawnPositionPacket = new S78SpawnPosition(MCPosition.New(0,64,0));
+                            var spawnPositionPacket = new S70SpawnPosition(MCPosition.New(0,64,0));
                             spawnPositionPacket.WritePacket(stream);
 
                             // Player Position and Look (to Client)
 
-                            var PPALPacket = new S47PlayerPositionAndLook(8f, 16f, 8f, 0f, 0f);
+                            var PPALPacket = new S47PlayerPositionAndLook(0f, 64f, 0f, 0f, 0f);
                             PPALPacket.teleportId = 0;
                             PPALPacket.WritePacket(stream);
 
@@ -325,9 +326,14 @@ namespace PumpkinMC
                 case GameState.PLAY:
                     switch(packetId)
                     {
+                        case 0x01: // Tab-Complete (from Client)
+                            var tabPacket = new C01TabComplete();
+                            tabPacket.ReadPacket(stream);
+
+                            return packetLen;
                         case 0x02: // Chat Message (to Server)
-                            var packet = new C02Chat();
-                            packet.ReadPacket(stream, gameClient);
+                            var chatPacket = new C02Chat();
+                            chatPacket.ReadPacket(stream, gameClient);
 
                             /*
 
@@ -406,14 +412,23 @@ namespace PumpkinMC
                             */
 
                             return packetLen;
-                        case 0x03:
-                            var respawnPacket = new S53Respawn();
-                            respawnPacket.WritePacket(stream);
+                        case 0x03: // Client Status
+                            var status = stream.ReadByte();
+                            if (status == 0)
+                            {
+                                var respawnPacket = new S53Respawn();
+                                respawnPacket.WritePacket(stream);
 
-                            var PPALPacket = new S47PlayerPositionAndLook(8f, 16f, 8f, 0f, 0f);
-                            PPALPacket.teleportId = 0;
-                            PPALPacket.WritePacket(stream);
-
+                                var PPALPacket = new S47PlayerPositionAndLook(0f, 64f, 0f, 0f, 0f);
+                                PPALPacket.teleportId = 0;
+                                PPALPacket.WritePacket(stream);
+                            }
+                            else
+                            {
+                                var statisticsPacket = new S07Statistics();
+                                statisticsPacket.WritePacket(stream);
+                            }
+                            
                             return packetLen;
                         case 0x04: // Client Info
                             byte[] locale = new byte[VarInt.Read(stream)];

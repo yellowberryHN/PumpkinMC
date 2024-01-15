@@ -6,6 +6,17 @@ namespace PumpkinMC.Util
 {
     class ChunkData
     {
+        public int chunkX;
+        public int chunkZ;
+        public bool isNew; // Ground-Up Continuous
+        public int chunkMask;
+        public ChunkSection[] sections;
+        public byte[] biomeInfo;
+        public int blockEntitiesSize;
+        public byte[] blockEntities;
+        
+        
+        
         //private void WriteChunkSection(ChunkSection section, Buffer buf)
         //{
         //    ChunkPalette palette = section.palette;
@@ -78,5 +89,32 @@ namespace PumpkinMC.Util
         //        }
         //    }
         //}
+    }
+
+    class ChunkSection
+    {
+        public byte bitsPerBlock; // 13 if dummy palette
+        public ChunkPalette palette;
+        public long[] compactedData;
+        public ChunkBlock[] data = new ChunkBlock[4096];
+        public byte[] blockLight = new byte[2048];
+        public byte[] skyLight = new byte[2048];
+
+        public void CompactData()
+        {
+            compactedData = new long[64 * bitsPerBlock]; // 832 with 13
+            // TODO: compact the data into the compactedData field somehow
+        }
+    }
+    
+    class ChunkPalette
+    {
+        public List<int> entries = new();
+    }
+
+    class ChunkBlock
+    {
+        public int id;
+        public int meta;
     }
 }
