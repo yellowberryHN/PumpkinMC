@@ -1,5 +1,5 @@
 # PumpkinMC
-A stupid little Minecraft 1.12.2 server written in .NET Core to teach myself networking.
+A stupid little Minecraft 1.12.2 server written in .NET 8 to teach myself networking.
 
 The goal is have more or less full support for every packet type in an object oriented way.
 

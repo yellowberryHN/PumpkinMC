@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace PumpkinMC.Util
@@ -11,19 +11,13 @@ namespace PumpkinMC.Util
     {
         public override string ToString()
         {
-            JsonSerializer serializer = new JsonSerializer();
-            serializer.NullValueHandling = NullValueHandling.Ignore;
-            serializer.DefaultValueHandling = DefaultValueHandling.Include;
-
-            StringBuilder sb = new StringBuilder();
-
-            using (StringWriter sw = new StringWriter(sb))
-            using (JsonWriter writer = new JsonTextWriter(sw))
+            var options = new JsonSerializerOptions
             {
-                serializer.Serialize(writer, this);
-                // {"ExpiryDate":new Date(1230375600000),"Price":0}
-            }
-            return sb.ToString();
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+                IncludeFields = true
+            };
+
+            return JsonSerializer.Serialize((object)this, options);
         }
     }
     public class MCJsonStringClickEvent : MCJson
@@ -94,7 +88,7 @@ namespace PumpkinMC.Util
     public class ServerStatusPlayerInfo : MCJson
     {
         public int max;
-        [JsonRequired]
+        [JsonIgnore(Condition = JsonIgnoreCondition.Never)]
         public int online;
         public List<ServerStatusPlayer> sample;
 
