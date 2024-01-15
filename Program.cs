@@ -526,7 +526,7 @@ namespace PumpkinMC
             {
                 // Set the TcpListener on port 25565.
                 int port = 25565;
-                IPAddress localAddr = IPAddress.Parse("127.0.0.1");
+                IPAddress localAddr = IPAddress.Parse("0.0.0.0");
 
                 // TcpListener server = new TcpListener(port);
                 server = new TcpListener(localAddr, port);
